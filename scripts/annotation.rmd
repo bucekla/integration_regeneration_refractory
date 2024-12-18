@@ -1,0 +1,406 @@
+---
+title: "Annotation_Ravi_tutorial_hpa"
+author: "Ladislav Buček"
+date: "5/11/2024"
+output: html_document
+---
+
+# setup 
+
+```{r setup, include=TRUE, cache=TRUE}
+# Setup chunk for the entire document
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.height = 8,
+  fig.path = "Figs/",
+  fig.width = 12,
+  message = TRUE,
+  warning = TRUE,
+  tidy = TRUE
+)
+
+# Define and set the working directory for each chunk
+here <- "/home/bucekl/projects/refractory_12/integration"
+here_data <- "/storage/home/bucekl"
+knitr::opts_knit$set(root.dir = paste(here))
+```
+# Parallel processing mine
+```{r parallel processing}
+# Setup Parallel Processing with 20 Cores
+library(future)
+library(future.apply)
+library(BiocParallel)
+
+# Detect the number of available cores
+cores <- min(20, parallel::detectCores(logical = TRUE)) # Use 20 or available cores, whichever is smaller
+print(paste0("Number of cores available: ", cores))
+
+# Configure future plan for multicore processing
+plan("multisession", workers = 20)  # Linux/Unix systems
+# plan("multisession", workers = cores)  # Windows systems
+
+# Set memory and seed options for reproducibility
+options(future.globals.maxSize = 60 * 1024^3)  # 60 GB memory limit
+options(future.seed = TRUE)
+
+# Set up BiocParallel (optional, used in some functions)
+#bpparam <- MulticoreParam(workers = cores) # Parallel backend for Bioconductor functions
+
+```
+# **Install and Load Required Libraries**
+```{r libraries ravis}
+# Set memory limit for Java and reproducibility seed
+options(java.parameters = "-Xmx30000m")
+set.seed(100)
+
+# List of required packages (from CRAN and Bioconductor)
+required_packages <- c("dplyr", "patchwork", "Seurat","DT","ggplot2","Polychrome","future","future.apply","BiocParallel","UCell")
+
+# Function to suppress both messages and warnings
+suppress_all <- function(expr) {
+  suppressMessages(suppressWarnings(expr))
+}
+
+# Install and load missing packages quietly
+install_and_load_packages <- function(package) {
+  if (!require(package, character.only = TRUE)) {
+    suppress_all(tryCatch({
+      install.packages(package, dependencies = TRUE)
+    }, error = function(e) {
+      if (!requireNamespace("BiocManager", quietly = TRUE)) {
+        suppress_all(install.packages("BiocManager"))
+      }
+      suppress_all(BiocManager::install(package))
+    }))
+  }
+  suppress_all(library(package, character.only = TRUE))
+}
+
+# Apply the function to install/load required packages
+invisible(lapply(required_packages, install_and_load_packages))
+```
+# data loading
+```{r top population markers}
+data_obj <- readRDS("/storage/home/bucekl/refractory_12/data/processed/integrated_obj_harmony.rds")
+#Combined_hpa_markers <- readRDS("/Users/ladislavbucek/Desktop/UK/Mgr./labgenexp/20200122_10x_frog_tail_regeneration/20220817_new_genome/data/processed/Combined_hpa_markers.rds")
+
+#Combined_hpa_conserved_markers <- FindConservedMarkers(Combined_hpa)
+head(Idents(data_obj))
+#datatable(Combined_hpa_markers %>% group_by(cluster) %>% top_n(n = 30, wt = avg_log2FC))
+```
+# Markers
+Resources for annotation
+- [Characterization of regeneration initiating cells during Xenopus laevis tail regeneration](https://genomebiology.biomedcentral.com/articles/10.1186/s13059-024-03396-3)
+from S4(A)
+```{r canonical markers}
+features_test_s4a <- c("tp63.L","tp63.S",        #basal epidermis
+                    "fgfbp2.L","nptx1.L",        #epidermis
+                    "epor.L","hba1.S",           #erythrocytes
+                    "itln1.L","anxa9.L",         #goblet cells
+                    "atp6v0d2.L","foxi1.L",      #ionocytes
+                    "iqcd.L","tekt3.L",          #MCCs
+                    "sox10.L","slc45a2.L",       #Melanocytes
+                    "eno3.L","des.1.L",          #muscle cells
+                    "sncb.L","elavl4.L",         #neuronal cells
+                    "plod2.L","col9a1-b",        #notochord
+                    "fgf10.L","lef1.S",          #ROCs
+                    "pax9.L","zic1.L",           #somites and other
+                    "foxa1.L","kcna4.S"          #SSCs
+                   )
+```
+from s20
+```{r group markers}
+features_test <- list(
+basal_epidermis_tp63_pos = c("htra4.L", "ctbs.S", "fgfbp2.S", "vit.L", "kera.S",
+                            "vit.S", "LOC108715242", "srpx.S", "lamb4.L",
+                            "LOC108711240", "col6a1.S", "thdl20.L",
+                            "LOC108706832", "LOC108701201", "npnt.S",
+                            "XB956263.L", "sema3d.L", "rgs10.L",
+                            "LOC108716056", "gpc1.S"),
+erythrocytes = c("alas2.S", "LOC108704227", "nt5dc4.L",
+                               "XB5727854.S", "rfesd.L", "erfe.L",
+                               "LOC121393603", "LOC108704189", "rhd.S",
+                               "MGC86526", "LOC121399868", "slc39a8.S",
+                               "hba1.S", "LOC108712598", "LOC121397920",
+                               "LOC121400387", "LOC108704049", "MGC69074",
+                               "rhag.L", "LOC108703093"),
+goblet_cells = c("LOC108714003", "atp12a.S", "LOC108714002",
+                              "rdh7.2.L", "LOC108703965", "LOC108718716",
+                              "atp1b2.L", "scnn1g.S", "upk1b.S", "slc18a1.S",
+                              "atp1b2.S", "cmahp.L", "epgn.S", "gjb1.L",
+                              "LOC108708308", "cdo1.S", "atp13a-like.L",
+                              "LOC108703949", "scnn1b.S", "gcm1.L"),
+ionocytes = c("atp6v1c2.L", "LOC108696914", "atp6ap1.1.L",
+                              "atp6v0a4.L", "foxi1.S", "LOC108704370",
+                              "atp6v1g3.S", "atp6v1g3.L", "ubp1.S", "ubp1.L",
+                              "ca2.S", "LOC108695244", "tspan1.S", "atp6v0d2.L",
+                              "atp6v1al.L", "tbc1d24.2.L", "atp6v1b1.L",
+                              "LOC108703568", "LOC121401445", "LOC108711381"),
+MCCs = c("LOC108714243", "odad3.S", "LOC121400779",
+                            "dzip1l.S", "LOC108698061", "dzip1l.L",
+                            "LOC108713489", "trim26.L", "togaram2.S",
+                            "LOC108716451", "LOC108711010", "cfap97d1.S",
+                            "LOC108711781", "LOC108704815", "XB5922676.S",
+                            "heatr4.S", "LOC108717135", "XB5857145.L",
+                            "spaca9.L", "spats1.S"),
+melanocytes_precursors = c("LOC108705433", "itga8.L", "clec3b.L",
+                                   "wfdc1.L", "wif1.L", "cdh15.L", "palmd.L",
+                                   "anos1.L", "angptl7.S", "crlf1.L",
+                                   "LOC108717256", "cd248.L", "meox2.S",
+                                   "wif1.S", "cthrc1.S", "tcf15.S", "tat.L",
+                                   "LOC108701205", "angptl7.L", "qdpr.S"),
+melanocytes = c("ednrb2.L", "slc2a7.L", "slc2a9.L",
+                              "LOC108701416", "LOC108708762", "ednrb2.S",
+                              "LOC108712326", "rab38.S", "sox10.L", "sox10.S",
+                              "LOC108710021", "rab38.L", "kcnj13.S",
+                              "slc45a2.L", "LOC108706956", "pmel.L", "gng10.S",
+                              "aoah.L", "pcdh10.L", "pax3.L"),
+muscle_cells_precursors = c("foxi2.S", "chrd.1.L", "eya1.L", "ncam1.L",
+                                   "six1.S", "LOC108707572", "foxc2.S",
+                                   "LOC108708756", "meox2.L", "sfrp2.S",
+                                   "ackr3.S", "LOC108718307", "LOC108716513",
+                                   "cxcr4.S", "sfrp2.L", "gdf10.L", "svep1.L",
+                                   "LOC108715742", "fgfrl1.L", "eya2.S"),
+muscle_cells = c("hhatl.S", "unc45b.S", "LOC108709709",
+                              "tmem74b.S", "nrap.L", "sh3bgr.S", "mypn.L",
+                              "XB5772073.S", "dhrs7c.S", "XB5726496.S",
+                              "mlip.L", "LOC108709492", "klhl40.S", "myom1.S",
+                              "myot.L", "LOC108707278", "LOC108714640",
+                              "mypn.S", "macrod1.L", "LOC108704424"),
+myeloid_cells = c("LOC108713911", "rab44.L", "tyrobp.L",
+                               "il18rap.L", "ptprc.L", "LOC108715797",
+                               "LOC495208", "lcp2.L", "LOC108711671", "plek.L",
+                               "fli1b.S", "LOC108701729", "itgb2.L",
+                               "LOC108703920", "myo1f.L", "myo1f.S",
+                               "LOC121396959", "cst7.S", "LOC108706902",
+                               "LOC108711670"),
+neuronal_cells = c("msi1.L", "prph.S", "gdap1l1.L", "hoxb9.S",
+                                "cdh2.S", "tuba1a.S", "nova1.L", "prph.L",
+                                "fabp7.L", "nova1.S", "nkain4.S", "tubb2b.S",
+                                "dpysl2.L", "dpysl3.S", "LOC108699392",
+                                "LOC108705063", "dpysl3.L", "ncam1.S",
+                                "tubb2b.L"),
+notochord = c("LOC108717871", "snorc.L", "crhr1.1.S",
+                                 "LOC121394868", "LOC444433", "clec3a.L",
+                                 "LOC108696917", "chad.L", "cnmd.S",
+                                 "c3orf49.L", "LOC108708396", "matn3.S",
+                                 "matn2.S", "bcan.S", "itgb8.S", "shh.S",
+                                 "eln1.L", "LOC108716950", "r3hdml.L",
+                                 "LOC108699572"),
+RICs = c("inhba.S", "mmp11.L", "lmcd1.L", "lamb3.S", "lep.L",
+                            "pmepa1.L", "LOC108715894", "palld.S", "lmcd1.S",
+                            "runx1.L", "inhba.L", "LOC108700342", "bcl2l10.S",
+                            "btbd11.S", "rasgef1b.L", "cda.L", "LOC108709238",
+                            "mmp8.L", "mmp8.S", "jag1.L"),
+ROCs = c("LOC108704954", "LOC108708721", "LOC108720086",
+                            "pltp.L", "tinagl1.S", "frem3.L", "pltp.S",
+                            "dlx6.S", "capn8.3.L", "LOC108718546", "cpa6.L",
+                            "egfl6.L", "col14a1.S", "sema3e.L", "bmp2.S",
+                            "cldn6.2.S", "megf6.S", "LOC108707243", "mmp3.L",
+                            "bhlha9.S"),
+somites_and_others = c("LOC108709739", "col4a2.S", "col4a2.L",
+                               "col4a1.L", "olfml3.L", "ptx3.L",
+                               "LOC108699211", "LOC108710901", "olfml3.S",
+                               "ptx3.S", "ugdhl.L", "twist1.S", "LOC108714329",
+                               "colec12.L", "pdgfra.L", "pdgfra.S", "twist1.L",
+                               "pax9.L", "tmem119.L", "aoc3.L"),
+SSCs = c("LOC121396556", "LOC108705874", "LOC101027296",
+                            "pcsk1.S", "LOC108711607", "LOC108701136",
+                            "LOC121393944", "spdef.S", "LOC108708799",
+                            "LOC108709387", "ag1.L", "tecta.2.S", "plekhb2.L",
+                            "ano1.L", "LOC108711604", "pcdh20.S", "MGC83376",
+                            "kcna4.S", "plcb4.L", "LOC108713813")
+)
+```
+# Dotplot before annotation
+```{r dotplot, echo=FALSE, fig.height=10, fig.width = 16.2}
+DotPlot(data_obj, features = features_test_s4a) + theme(axis.text.x=element_text(angle=90, hjust = 1, vjust = 0.5))
+
+# dotplot for every cell type markers from S20
+
+# Generate and store the plots
+# For loop to create DotPlots for all groups in features_test
+features_test <- lapply(features_test, function(x) x[x %in% rownames(data_obj)])
+
+# List to store plots
+plot_list <- list()
+
+# Generate DotPlots
+for (group in names(features_test)) {
+  markers <- features_test[[group]]
+  
+  if (length(markers) > 0) {
+    plot <- DotPlot(data_obj, features = markers, assay = "integrated") +
+      scale_x_discrete(drop = FALSE) +  # Ensure consistent axes
+      ggtitle(paste("DotPlot for", group)) +
+      theme(axis.text.x = element_text(angle = 45, hjust = 1))
+    plot_list[[group]] <- plot
+  } else {
+    message(paste("No valid markers for group:", group))
+  }
+}
+
+# Combine and print plots in pairs
+for (i in seq(1, length(plot_list), by = 1)) {
+  p1 <- plot_list[[i]]
+  #p2 <- if (i + 1 <= length(plot_list)) plot_list[[i + 1]] else NULL
+  
+  #combined <- if (!is.null(p2)) print(p1 + p2) else print(p1)
+  print(p1)
+}
+```
+# UCell before annotation
+```{r Ucell plots before annotation, fig.height=6, fig.width = 10, eval=FALSE}
+data_obj <- AddModuleScore_UCell(data_obj, features = features_test)
+
+signature.names <- paste0(names(features_test), "_UCell")
+
+#for (group in names(features_test)) {
+#    markers <- features_test[[group]]
+#    data_obj[[paste0(group_name, "_combined")]] <- rowMeans(
+#        FetchData(data_obj, vars = markers),
+#        na.rm = TRUE
+#    )
+#}
+    # Create a list of the new combined feature names
+#combined_features <- paste0(names(features_test), "_combined")
+
+# Plot the combined UCell scores for each group
+for (signature.name in signature.names) {
+    plot <- VlnPlot(data_obj, features = signature.name, group.by = "seurat_clusters", pt.size = 0.5) +
+        ggtitle(paste("UCell Score for", gsub("_combined", "", signature.name))) +
+        theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+        theme(plot.title = element_text(size = 14, face = "bold"))
+    
+    print(plot)  # Print each plot
+}
+print("works")
+```
+# Cluster annotation
+Cluster that I was unable to annotate have only goblet cells markers but not higher than most of the other clusters
+```{r,eval = FALSE}
+levels(Combined_hpa)
+head(Idents(Combined_hpa))
+Combined_hpa <- RenameIdents(Combined_hpa,
+                                  "0" = "basal epidermis (tp63+)",
+                                  '1' = "goblet cells",
+                                  '2' = "RICs",
+                                  '3' = "basal epidermis (tp63+)",
+                                  '4' = "somites and others",
+                                  '5' = "basal epidermis (tp63+)",
+                                  '6' = "RICs",
+                                  '7' = "melanocytes precusors",
+                                  '8' = "goblet cells",
+                                  '9' = "ROCs",
+                                  '10' = "muscle cells",
+                                  '11' = "muscle cells precusors",
+                                  '12' = "muscle cells",
+                                  '13' = "myeloid cells",
+                                  '14' = "MCCs",
+                                  '15' = "muscle cells",
+                                  '16' = "neuronal cells",
+                                  '17' = "erythrocytes",
+                                  '18' = "ionocytes",
+                                  '19' = "goblet cells",
+                                  '20' = "melanocytes",
+                                  '21' = "muscle cells precusors",
+                                  '22' = "SSCs",
+                                  '23' = "notochord",
+                                  '24' = "ionocytes",
+                                  '25' = "myeloid cells",
+                                  '26' = "myeloid cells",
+                                  '27' = "ROCs",
+                                  '28' = "myeloid cells",
+                                  '29' = "melanocytes",
+                                  '30' = "somites and others",
+                                  '31' = "SSCs",
+                                  '32' = "MCCs")
+```
+Merged clusters visualised 
+```{r,eval = FALSE}
+
+levels(Combined_hpa)
+# View the metadata
+
+cluster_labels_m <- levels(Combined_hpa)
+
+# Generate a color palette with the same number of colors as there are clusters
+cluster_colors_m <- Polychrome::createPalette(length(cluster_labels_m), c("#ff0000", "#00ff00", "#0000ff"))
+
+# Assign each color to a cluster name
+names(cluster_colors_m) <- cluster_labels_m
+
+# Generate the UMAP plot with custom colors
+DimPlot(Combined_hpa, reduction = "umap") +
+    scale_color_manual(values = cluster_colors_m) +
+    theme_minimal() +
+    ggtitle("UMAP with merged clusters")
+```
+
+# Comparision with Ravi's annotation
+```{r,fig.height=10, fig.width = 16.2,eval = FALSE}
+obj_ravi_processed <- readRDS("/Users/ladislavbucek/Desktop/UK/Mgr./labgenexp/20200122_10x_frog_tail_regeneration/20220817_new_genome/data/processed/seurat_integrated_sctmark_ravi.rds")
+
+#updating my barcodes to match Ravi's
+rownames(Combined_hpa@meta.data) <- gsub("_1", "-0_hpa_B", rownames(Combined_hpa@meta.data))
+rownames(Combined_hpa@meta.data) <- gsub("_2", "-1_hpa_B", rownames(Combined_hpa@meta.data))
+rownames(Combined_hpa@meta.data) <- gsub("_3", "-3_hpa_A", rownames(Combined_hpa@meta.data))
+rownames(Combined_hpa@meta.data) <- gsub("_4", "-12_hpa_A", rownames(Combined_hpa@meta.data))
+
+# Check if the rownames now match
+length(intersect(rownames(Combined_hpa@meta.data), rownames(obj_ravi_processed@meta.data)))
+
+# Add the identities to the metadata
+Combined_hpa@meta.data$my_annotation <- as.character(Idents(Combined_hpa))
+
+ravi_meta_data <- obj_ravi_processed@meta.data
+
+Combined_hpa$ravi_annotation <- ravi_meta_data$cell_type_final[match(rownames(Combined_hpa@meta.data), rownames(ravi_meta_data))]
+
+comparison_df <- Combined_hpa@meta.data %>%
+  group_by(my_annotation, ravi_annotation) %>%
+  summarise(count = n()) %>%
+  group_by(my_annotation) %>%
+  mutate(proportion = count / sum(count))
+
+ggplot(comparison_df, aes(x = my_annotation, y = proportion, fill = ravi_annotation)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(x = "Ladislav's Annotation", y = "Proportion", fill = "Ravi's Annotation") +
+  theme_minimal() +
+  ggtitle("Comparison of Annotations")+
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Seurat clusters correlation
+```{r,eval = FALSE}
+Combined_hpa$ravi_seurat_clusters <- ravi_meta_data$seurat_clusters[match(rownames(Combined_hpa@meta.data), rownames(ravi_meta_data))]
+#TO DO
+comparison_df <- Combined_hpa@meta.data %>%
+  group_by(seurat_clusters, ravi_seurat_clusters) %>%
+  summarise(count = n()) %>%
+  group_by(seurat_clusters) %>%
+  mutate(proportion = count / sum(count))
+
+ggplot(comparison_df, aes(x = seurat_clusters, y = proportion, fill = ravi_seurat_clusters)) +
+  geom_bar(stat = "identity", position = "fill") +
+  labs(x = "Ladislav's Clusters", y = "Proportion", fill = "Ravi's Clusters") +
+  theme_minimal() +
+  ggtitle("Comparison of Clusters")
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+### Comparision of gene sets
+```{r,eval = FALSE}
+length(rownames(Combined_hpa))
+length(rownames(obj_ravi_processed))
+common_genes <- intersect(rownames(Combined_hpa), rownames(obj_ravi_processed))
+
+gene_comparison_df <- data.frame(Gene = common_genes)
+
+marker_presence <- gene_comparison_df[gene_comparison_df$Gene %in% features_test, ]
+
+if(length(marker_presence) == length(features_test)){
+    print("no marker is missing in Ladislav's dataset")
+}
+
+```
