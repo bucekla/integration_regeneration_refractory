@@ -52,25 +52,6 @@ options(future.seed = TRUE)
 #bpparam <- MulticoreParam(workers = cores) # Parallel backend for Bioconductor functions
 
 ```
-# **Setup Parallel Processing**
-```{r parallelization}
-# Detect number of cores and setup parallel processing
-cores <- parallel::detectCores(logical = TRUE)
-#registerDoParallel(cores = 1)  # Set to use 1 core
-# stopImplicitCluster()
-print(paste0("number of cores used: ", getDoParWorkers()))
-
-# Set future plan with reproducibility
-options(future.seed = TRUE) # set seed
-options(future.globals.maxSize = 60000 * 1024^2) # 60 GB of memory to use
-# plan("multicore", workers = 20)
-# plan(sequential)
-
-# BiocParallel setup (optional customization)
-# bpparam()
-# bpparam <- MulticoreParam(workers = 1) 
-# bpstop(param)
-```
 # **Install and Load Required Libraries**
 ```{r libraries ravis, message = FALSE, warning = FALSE}
 # Set memory limit for Java and reproducibility seed
@@ -142,8 +123,7 @@ regeneration_annotated <- readRDS(file = file.path(here_data, "20200122_10x_frog
 regeneration_annotated <- UpdateSeuratObject(regeneration_annotated)
 
 ```
-# my code
-# SCT-harmony
+# SCT-rpca
 ```{r sct pippeline}
 #refractory_annotated <- SCTransform(refractory_annotated,verbose = TRUE, return.only.var.genes = TRUE,
 #                                         assay = "RNA",n_genes = NULL, variable.features.n = NULL)
@@ -166,139 +146,9 @@ Combined_hpa <- IntegrateLayers(
 
 Combined_hpa[["RNA"]] <- JoinLayers(Combined_hpa[["RNA"]])
 
-Combined_hpa <- FindNeighbors(Combined_hpa,reduction = "harmony", dims = 1:30)
-Combined_hpa <- FindClusters(Combined_hpa, resolution = 2, cluster.name = "harmony_clusters")
-Combined_hpa <- RunUMAP(Combined_hpa, reduction = "harmony", dims = 1:30, reduction.name = "umap.harmony")
+Combined_hpa <- FindNeighbors(Combined_hpa,reduction = "rpca.int", dims = 1:30)
+Combined_hpa <- FindClusters(Combined_hpa, resolution = 2, cluster.name = "rpca.int_clusters")
+Combined_hpa <- RunUMAP(Combined_hpa, reduction = "rpca.int", dims = 1:30, reduction.name = "umap.rpca.int")
 saveRDS(Combined_hpa, file = "/storage/home/bucekl/refractory_12/data/processed/integrated_obj_rpca.rds")
 
-```
-# GPT
-```{r gpt sol}
-# Set RNA assay as active and normalize refractory dataset
-DefaultAssay(refractory_annotated) <- "RNA"
-refractory_annotated <- NormalizeData(refractory_annotated, normalization.method = "LogNormalize", scale.factor = 10000)
-refractory_annotated <- FindVariableFeatures(refractory_annotated, selection.method = "vst")
-
-# Set RNA assay as active and normalize regeneration dataset
-DefaultAssay(regeneration_annotated) <- "RNA"
-regeneration_annotated <- NormalizeData(regeneration_annotated, normalization.method = "LogNormalize", scale.factor = 10000)
-regeneration_annotated <- FindVariableFeatures(regeneration_annotated, selection.method = "vst")
-
-integration_features <- SelectIntegrationFeatures(object.list = list(refractory_annotated, regeneration_annotated), nfeatures = 10000, fvf.nfeatures = 10000)
-anchors <- FindIntegrationAnchors(object.list = list(refractory_annotated, regeneration_annotated), anchor.features = integration_features, dims = 1:30)
-Combined_obj <- IntegrateData(anchorset = anchors, dims = 1:30)
-
-
-```
-## Merging and data scaling
-```{r} 
-refractory_annotated <- NormalizeData(refractory_annotated)
-refractory_annotated <- FindVariableFeatures(refractory_annotated)
-refractory_annotated <- ScaleData(refractory_annotated)
-refractory_annotated <- RunPCA(refractory_annotated)
-
-regeneration_annotated <- NormalizeData(regeneration_annotated, assay = "RNA")
-regeneration_annotated <- FindVariableFeatures(regeneration_annotated, assay = "RNA")
-regeneration_annotated <- ScaleData(regeneration_annotated, assay = "RNA")
-regeneration_annotated <- RunPCA(regeneration_annotated)
-
-# Set RNA as the active assay for both objects
-DefaultAssay(regeneration_annotated) <- "RNA"
-DefaultAssay(refractory_annotated) <- "RNA"
-
-Combined_obj <- merge(regeneration_annotated, y = refractory_annotated, project = "Combined_obj")
-all.genes <- rownames(Combined_obj)
-Combined_obj <- NormalizeData(Combined_obj)
-Combined_obj <- FindVariableFeatures(Combined_obj)
-Combined_obj <- ScaleData(Combined_obj, features = all.genes)
-```
-
-
-## PCA UMAP
-```{r PCA}
-Combined_obj <- RunPCA(Combined_obj)
-ElbowPlot(Combined_obj, ndims = 50)
-Combined_obj <- FindNeighbors(Combined_obj, dims = 1:30 , reduction = "pca", verbose = TRUE)
-Combined_obj <- FindClusters(Combined_obj, resolution = 2, verbose = TRUE)
-Combined_obj <- RunUMAP(Combined_obj, dims = 1:30, reduction = "pca", reduction.name = "umap.unintegrated")
-DimPlot(Combined_obj, reduction = "umap.unintegrated" )
-```
-
-## Alternative path
-Unused 
-```{r}
-features <- SelectIntegrationFeatures(object.list = list(refractory_annotated,regeneration_annotated))
-#obj_0_hpa_B <- ScaleData(obj_0_hpa_B, features = features)
-#obj_1_hpa_B <- ScaleData(obj_1_hpa_B, features = features)
-#obj_3_hpa_A <- ScaleData(obj_3_hpa_A, features = features)
-#obj_12_hpa_A <- ScaleData(obj_12_hpa_A, features = features)
-
-anchors <- FindIntegrationAnchors(object.list = list(refractory_annotated,regeneration_annotated), anchor.features = features)
-Combined_obj <- IntegrateData(anchorset = anchors)
-##### Scale integrated data
-
-Combined_obj <- NormalizeData(Combined_obj) #chat skipol
-
-Combined_obj <- ScaleData(Combined_obj)
-
-##### Run PCA
-Combined_obj <- RunPCA(Combined_obj)
-
-#### Run UMAP
-Combined_obj <- RunUMAP(Combined_obj, dims = 1:30)
-
-#### Find Clusters
-Combined_obj <- FindNeighbors(Combined_obj, dims = 1:30)
-Combined_obj <- FindClusters(Combined_obj, resolution = 2)
-Combined_hpa <- JoinLayers(Combined_hpa)
-
-```
-## Integration 
-```{r integration, echo=FALSE, fig.height=10, fig.width = 16.2}
-Combined_obj
-#saveRDS(Combined_obj, file = #"home/bucekl/projects/refractory_12/data/processed/combined_obj.rds")
-Combined_obj <- IntegrateLayers(object = Combined_obj, method = CCAIntegration, orig.reduction = "pca", new.reduction = "integrated.cca", verbose = FALSE)
-
-#rejoin layers 
-Combined_obj[["RNA"]] <- JoinLayers(Combined_obj[["RNA"]])
-########gpt Scale integrated data
-
-Combined_obj <- FindNeighbors(Combined_obj, reduction = "integrated.cca", dims = 1:30)
-Combined_obj <- FindClusters(Combined_obj, resolution = 2)
-Combined_obj <- RunUMAP(Combined_obj, dims = 1:30, reduction = "integrated.cca")
-
-# Visualization
-
-# Define a distinct color palette for clusters
-cluster_colors <- Polychrome::createPalette(length(levels(Combined_obj$seurat_clusters)), c("#ff0000", "#00ff00", "#0000ff"))
-# Ensure cluster_colors is a named vector
-
-cluster_labels <- as.character(0:(length(levels(Combined_obj$seurat_clusters))-1))  # Creates labels from "0" to "31"
-names(cluster_colors) <- cluster_labels  # Assign each color to a cluster label
-
-# Generate the UMAP plot
-plot_data <- FetchData(Combined_obj, vars = c("UMAP_1", "UMAP_2", "seurat_clusters"))
-
-# Ensure color mapping aligns
-plot_data$seurat_clusters <- factor(plot_data$seurat_clusters, levels = names(cluster_colors))
-
-# Create ggplot manually
-ggplot(plot_data, aes(x = UMAP_1, y = UMAP_2, color = seurat_clusters)) +
-    geom_point(size = 1) +
-    scale_color_manual(values = cluster_colors) +
-    theme_minimal() +
-    ggtitle("UMAP with Distinguishable Colors")
-
-
-saveRDS(Combined_obj, file = "/storage/home/bucekl/refractory_12/data/processed/integrated_obj.rds")
-
-```
-
-## markers and annotation
-```{r}
-Idents(Combined_obj) <- Combined_obj@meta.data$seurat_clusters
-Combined_hpa_markers <- FindAllMarkers(Combined_obj, only.pos = TRUE)
-#Combined_hpa_conserved_markers <- FindConservedMarkers(Combined_obj)
-head(Idents(Combined_obj))
-saveRDS(Combined_hpa_markers, file = "/storage/home/bucekl/refractory_12/data/processed/integrated_markers.rds")
 ```
