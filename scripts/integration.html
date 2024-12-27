@@ -3054,7 +3054,7 @@ Combined_hpa[[&quot;RNA&quot;]] &lt;- split(Combined_hpa[[&quot;RNA&quot;]], f =
 <pre><code>## Second step: Get residuals using fitted parameters for 29563 genes</code></pre>
 <pre><code>## Computing corrected count matrix for 29563 genes</code></pre>
 <pre><code>## Calculating gene attributes</code></pre>
-<pre><code>## Wall clock passed: Time difference of 53.49895 secs</code></pre>
+<pre><code>## Wall clock passed: Time difference of 51.04241 secs</code></pre>
 <pre><code>## Determine variable features</code></pre>
 <pre><code>## Centering data matrix</code></pre>
 <pre><code>## Running SCTransform on layer: counts.ravi_0_hpa_B</code></pre>
@@ -3067,7 +3067,7 @@ Combined_hpa[[&quot;RNA&quot;]] &lt;- split(Combined_hpa[[&quot;RNA&quot;]], f =
 <pre><code>## Second step: Get residuals using fitted parameters for 27822 genes</code></pre>
 <pre><code>## Computing corrected count matrix for 27822 genes</code></pre>
 <pre><code>## Calculating gene attributes</code></pre>
-<pre><code>## Wall clock passed: Time difference of 1.003729 mins</code></pre>
+<pre><code>## Wall clock passed: Time difference of 55.77786 secs</code></pre>
 <pre><code>## Determine variable features</code></pre>
 <pre><code>## Centering data matrix</code></pre>
 <pre><code>## Getting residuals for block 1(of 2) for ravi_0_hpa_B dataset</code></pre>
@@ -3081,19 +3081,18 @@ Combined_hpa[[&quot;RNA&quot;]] &lt;- split(Combined_hpa[[&quot;RNA&quot;]], f =
 <pre class="r"><code>Combined_hpa &lt;- RunPCA(Combined_hpa,npcs = 30, verbose = F)
 Combined_hpa &lt;- IntegrateLayers(
   object = Combined_hpa,
-  orig.reduction = &quot;pca&quot;,
-  method = RPCAIntegration,
-  new.reduction = &#39;rpca.int&#39;,
+  #orig.reduction = &quot;pca&quot;,
+  method = CCAIntegration,
+  #new.reduction = &#39;rpca.int&#39;,
   normalization.method = &quot;SCT&quot;,
   verbose = T,
 )</code></pre>
-<pre><code>## Computing within dataset neighborhoods</code></pre>
 <pre><code>## Finding all pairwise anchors</code></pre>
-<pre><code>## Projecting new data onto SVD
-## Projecting new data onto SVD</code></pre>
+<pre><code>## Running CCA</code></pre>
+<pre><code>## Merging objects</code></pre>
 <pre><code>## Finding neighborhoods</code></pre>
 <pre><code>## Finding anchors</code></pre>
-<pre><code>##  Found 2649 anchors</code></pre>
+<pre><code>##  Found 7523 anchors</code></pre>
 <pre><code>## Merging dataset 1 into 2</code></pre>
 <pre><code>## Extracting anchors for merged samples</code></pre>
 <pre><code>## Finding integration vectors</code></pre>
@@ -3101,37 +3100,37 @@ Combined_hpa &lt;- IntegrateLayers(
 <pre><code>## Integrating data</code></pre>
 <pre class="r"><code>Combined_hpa[[&quot;RNA&quot;]] &lt;- JoinLayers(Combined_hpa[[&quot;RNA&quot;]])
 
-Combined_hpa &lt;- FindNeighbors(Combined_hpa,reduction = &quot;rpca.int&quot;, dims = 1:30,graph.name = c(&quot;rpca.int_nn&quot;, &quot;rpca.int_snn&quot;))</code></pre>
+Combined_hpa &lt;- FindNeighbors(Combined_hpa,reduction = &quot;integrated.dr&quot;, dims = 1:30)#graph.name = c(&quot;rpca.int_nn&quot;, &quot;rpca.int_snn&quot;))</code></pre>
 <pre><code>## Computing nearest neighbor graph</code></pre>
 <pre><code>## Computing SNN</code></pre>
-<pre class="r"><code>Combined_hpa &lt;- FindClusters(Combined_hpa, graph.name = &quot;rpca.int_snn&quot;, resolution = 2)</code></pre>
+<pre class="r"><code>Combined_hpa &lt;- FindClusters(Combined_hpa, resolution = 2)</code></pre>
 <pre><code>## Modularity Optimizer version 1.3.0 by Ludo Waltman and Nees Jan van Eck
 ## 
 ## Number of nodes: 10143
-## Number of edges: 315556
+## Number of edges: 323040
 ## 
 ## Running Louvain algorithm...
-## Maximum modularity in 10 random starts: 0.8741
-## Number of communities: 42
+## Maximum modularity in 10 random starts: 0.8691
+## Number of communities: 41
 ## Elapsed time: 1 seconds</code></pre>
-<pre class="r"><code>Combined_hpa &lt;- RunUMAP(Combined_hpa, reduction = &quot;rpca.int&quot;, dims = 1:30, reduction.name = &quot;umap.rpca.int&quot;)</code></pre>
+<pre class="r"><code>Combined_hpa &lt;- RunUMAP(Combined_hpa, reduction = &quot;integrated.dr&quot;, dims = 1:30) #reduction.name = &quot;umap.rpca.int&quot;)</code></pre>
 <pre><code>## Warning: The default method for RunUMAP has changed from calling Python UMAP via reticulate to the R-native UWOT using the cosine metric
 ## To use Python UMAP via reticulate, set umap.method to &#39;umap-learn&#39; and metric to &#39;correlation&#39;
 ## This message will be shown once per session</code></pre>
-<pre><code>## 20:38:29 UMAP embedding parameters a = 0.9922 b = 1.112</code></pre>
-<pre><code>## 20:38:29 Read 10143 rows and found 30 numeric columns</code></pre>
-<pre><code>## 20:38:29 Using Annoy for neighbor search, n_neighbors = 30</code></pre>
-<pre><code>## 20:38:29 Building Annoy index with metric = cosine, n_trees = 50</code></pre>
+<pre><code>## 00:05:07 UMAP embedding parameters a = 0.9922 b = 1.112</code></pre>
+<pre><code>## 00:05:07 Read 10143 rows and found 30 numeric columns</code></pre>
+<pre><code>## 00:05:07 Using Annoy for neighbor search, n_neighbors = 30</code></pre>
+<pre><code>## 00:05:07 Building Annoy index with metric = cosine, n_trees = 50</code></pre>
 <pre><code>## 0%   10   20   30   40   50   60   70   80   90   100%</code></pre>
 <pre><code>## [----|----|----|----|----|----|----|----|----|----|</code></pre>
 <pre><code>## **************************************************|
-## 20:38:31 Writing NN index file to temp file /tmp/RtmpEVKX5s/file2ab044774c9fca
-## 20:38:31 Searching Annoy index using 20 threads, search_k = 3000
-## 20:38:31 Annoy recall = 100%
-## 20:38:32 Commencing smooth kNN distance calibration using 20 threads with target n_neighbors = 30
-## 20:38:33 Initializing from normalized Laplacian + noise (using RSpectra)
-## 20:38:34 Commencing optimization for 200 epochs, with 405158 positive edges
-## 20:38:42 Optimization finished</code></pre>
+## 00:05:09 Writing NN index file to temp file /tmp/RtmpCs1fAK/file2c7d91459fe11
+## 00:05:09 Searching Annoy index using 20 threads, search_k = 3000
+## 00:05:09 Annoy recall = 100%
+## 00:05:10 Commencing smooth kNN distance calibration using 20 threads with target n_neighbors = 30
+## 00:05:12 Initializing from normalized Laplacian + noise (using RSpectra)
+## 00:05:12 Commencing optimization for 200 epochs, with 410986 positive edges
+## 00:05:21 Optimization finished</code></pre>
 <pre class="r"><code>saveRDS(Combined_hpa, file = &quot;/storage/home/bucekl/refractory_12/data/processed/integrated_obj_rpca.rds&quot;)</code></pre>
 </div>
 
