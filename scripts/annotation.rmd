@@ -218,7 +218,6 @@ SSCs = c("LOC121396556", "LOC108705874", "LOC101027296",
 DotPlot(data_obj, features = features_test_s4a) + theme(axis.text.x=element_text(angle=90, hjust = 1, vjust = 0.5))
 
 # dotplot for every cell type markers from S20
-subset(data_obj,subset = Idents(data_obj) == 3)
 # Generate and store the plots
 # For loop to create DotPlots for all groups in features_test
 #features_test <- lapply(features_test, function(x) x[x %in% rownames(data_obj)])
