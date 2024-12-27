@@ -81,12 +81,13 @@ invisible(lapply(required_packages, install_and_load_packages))
 ```
 # data loading
 ```{r top population markers}
-data_obj <- readRDS("/storage/home/bucekl/refractory_12/data/processed/integrated_obj_harmony.rds")
+data_obj <- readRDS("/storage/home/bucekl/refractory_12/data/processed/integrated_obj_rpca.rds")
 #Combined_hpa_markers <- readRDS("/Users/ladislavbucek/Desktop/UK/Mgr./labgenexp/20200122_10x_frog_tail_regeneration/20220817_new_genome/data/processed/Combined_hpa_markers.rds")
 
 #Combined_hpa_conserved_markers <- FindConservedMarkers(Combined_hpa)
 head(Idents(data_obj))
 #datatable(Combined_hpa_markers %>% group_by(cluster) %>% top_n(n = 30, wt = avg_log2FC))
+DefaultAssay(data_obj) <- "integrated"
 ```
 # Markers
 Resources for annotation
@@ -217,10 +218,10 @@ SSCs = c("LOC121396556", "LOC108705874", "LOC101027296",
 DotPlot(data_obj, features = features_test_s4a) + theme(axis.text.x=element_text(angle=90, hjust = 1, vjust = 0.5))
 
 # dotplot for every cell type markers from S20
-
+subset(data_obj,subset = Idents(data_obj) == 3)
 # Generate and store the plots
 # For loop to create DotPlots for all groups in features_test
-features_test <- lapply(features_test, function(x) x[x %in% rownames(data_obj)])
+#features_test <- lapply(features_test, function(x) x[x %in% rownames(data_obj)])
 
 # List to store plots
 plot_list <- list()
@@ -282,39 +283,48 @@ Cluster that I was unable to annotate have only goblet cells markers but not hig
 levels(Combined_hpa)
 head(Idents(Combined_hpa))
 Combined_hpa <- RenameIdents(Combined_hpa,
-                                  "0" = "basal epidermis (tp63+)",
-                                  '1' = "goblet cells",
-                                  '2' = "RICs",
-                                  '3' = "basal epidermis (tp63+)",
-                                  '4' = "somites and others",
-                                  '5' = "basal epidermis (tp63+)",
-                                  '6' = "RICs",
-                                  '7' = "melanocytes precusors",
-                                  '8' = "goblet cells",
-                                  '9' = "ROCs",
-                                  '10' = "muscle cells",
-                                  '11' = "muscle cells precusors",
-                                  '12' = "muscle cells",
-                                  '13' = "myeloid cells",
-                                  '14' = "MCCs",
-                                  '15' = "muscle cells",
-                                  '16' = "neuronal cells",
-                                  '17' = "erythrocytes",
-                                  '18' = "ionocytes",
-                                  '19' = "goblet cells",
-                                  '20' = "melanocytes",
-                                  '21' = "muscle cells precusors",
-                                  '22' = "SSCs",
+                                  "0" = "RICS",
+                                  '1' = "basal epidermis",
+                                  '2' = "basal epidermis",
+                                  '3' = "",
+                                  '4' = "goblet cells",
+                                  '5' = "ROCs",
+                                  '6' = "basal epidermis",
+                                  '7' = "basal epidermis",
+                                  '8' = "somites and others",
+                                  '9' = "erythrocytes",
+                                  '10' = "ROCs",#some markers woth lower exp
+                                  '11' = "somites and others",
+                                  '12' = "",
+                                  '13' = "erythrocytes",
+                                  '14' = "neuronal cells",
+                                  '15' = "",#maybe melano or muscle cells prec
+                                  '16' = "",
+                                  '17' = "goblet cells",
+                                  '18' = "myeloid cells",
+                                  '19' = "notochord",
+                                  '20' = "erythrocytes",
+                                  '21' = "",
+                                  '22' = "myeloid cells",
                                   '23' = "notochord",
-                                  '24' = "ionocytes",
-                                  '25' = "myeloid cells",
-                                  '26' = "myeloid cells",
-                                  '27' = "ROCs",
-                                  '28' = "myeloid cells",
-                                  '29' = "melanocytes",
-                                  '30' = "somites and others",
-                                  '31' = "SSCs",
-                                  '32' = "MCCs")
+                                  '24' = "muscle cells",
+                                  '25' = "muscle cells",
+                                  '26' = "goblet cells",
+                                  '27' = "melanocytes precursors",#some somites and others markers or muscle cells prec
+                                  '28' = "ionocytes",
+                                  '29' = "neuronal cells",
+                                  '30' = "SSCs",
+                                  '31' = "muscle cells",
+                                  '32' = "myeloid cells",
+                                  '33' = "",
+                                  '34' = "goblet cells",
+                                  '35' = "ionocytes/goblet",
+                                  '36' = "",
+                                  '37' = "somites and others",
+                                  '38' = "myeloid cells",#some markers lower exp
+                                  '39' = "myeloid cells",#some markers lower exp
+                                  '40' = "SSCs/goblet cells",
+                                  '41' = "MCCs")
 ```
 Merged clusters visualised 
 ```{r,eval = FALSE}

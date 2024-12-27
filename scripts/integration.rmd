@@ -118,6 +118,8 @@ datatable(data.frame("Packages" = package_versions))
 # Load mine annotated refractory data
 refractory_annotated <- readRDS(file = file.path(here_data, "refractory_12","data","processed", "data_obj_processed_annotated.rds"))
 # Load Pavel's ? annotated Seurat object
+refractory_annotated <- UpdateSeuratObject(refractory_annotated)
+
 regeneration_annotated <- readRDS(file = file.path(here_data, "20200122_10x_frog_tail_regeneration","data","processed",
 "seurat_integrated_sctmark_ravi.rds"))
 regeneration_annotated <- UpdateSeuratObject(regeneration_annotated)
@@ -131,7 +133,7 @@ regeneration_annotated <- UpdateSeuratObject(regeneration_annotated)
 Combined_hpa <- merge(regeneration_annotated, y = c(refractory_annotated), project = "Combined_hpa")
 # Split SCT assay by method
 Combined_hpa[["RNA"]] <- split(Combined_hpa[["RNA"]], f = Combined_hpa$orig.ident)
-Combined_hpa <- SCTransform(Combined_hpa, verbose = TRUE)
+Combined_hpa <- SCTransform(Combined_hpa,variable.features.n = 5000 ,verbose = TRUE)
 
 
 Combined_hpa <- RunPCA(Combined_hpa,npcs = 30, verbose = F)
@@ -146,8 +148,8 @@ Combined_hpa <- IntegrateLayers(
 
 Combined_hpa[["RNA"]] <- JoinLayers(Combined_hpa[["RNA"]])
 
-Combined_hpa <- FindNeighbors(Combined_hpa,reduction = "rpca.int", dims = 1:30)
-Combined_hpa <- FindClusters(Combined_hpa, resolution = 2, cluster.name = "rpca.int_clusters")
+Combined_hpa <- FindNeighbors(Combined_hpa,reduction = "rpca.int", dims = 1:30,graph.name = c("rpca.int_nn", "rpca.int_snn"))
+Combined_hpa <- FindClusters(Combined_hpa, graph.name = "rpca.int_snn", resolution = 2)
 Combined_hpa <- RunUMAP(Combined_hpa, reduction = "rpca.int", dims = 1:30, reduction.name = "umap.rpca.int")
 saveRDS(Combined_hpa, file = "/storage/home/bucekl/refractory_12/data/processed/integrated_obj_rpca.rds")
 

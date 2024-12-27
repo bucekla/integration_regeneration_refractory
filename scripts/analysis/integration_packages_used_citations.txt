@@ -207,13 +207,6 @@ Categorical Variables},
   pages = {1--34},
   doi = {10.18637/jss.v064.i04},
 }
-@Manual{,
-  title = {formatR: Format R Code Automatically},
-  author = {Yihui Xie},
-  year = {2023},
-  note = {R package version 1.14},
-  url = {https://CRAN.R-project.org/package=formatR},
-}
 @Article{RJ-2021-048,
   author = {Henrik Bengtsson},
   title = {A Unifying Framework for Parallel and Distributed Processing in R using Futures},
