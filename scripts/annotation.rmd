@@ -87,7 +87,7 @@ data_obj <- readRDS("/storage/home/bucekl/refractory_12/data/processed/integrate
 #Combined_hpa_conserved_markers <- FindConservedMarkers(Combined_hpa)
 head(Idents(data_obj))
 #datatable(Combined_hpa_markers %>% group_by(cluster) %>% top_n(n = 30, wt = avg_log2FC))
-DefaultAssay(data_obj) <- "integrated"
+###DefaultAssay(data_obj) <- "integrated"
 ```
 # Markers
 Resources for annotation
@@ -230,7 +230,7 @@ for (group in names(features_test)) {
   markers <- features_test[[group]]
   
   if (length(markers) > 0) {
-    plot <- DotPlot(data_obj, features = markers, assay = "integrated") +
+    plot <- DotPlot(data_obj, features = markers, assay = "SCT") +
       scale_x_discrete(drop = FALSE) +  # Ensure consistent axes
       ggtitle(paste("DotPlot for", group)) +
       theme(axis.text.x = element_text(angle = 45, hjust = 1))
